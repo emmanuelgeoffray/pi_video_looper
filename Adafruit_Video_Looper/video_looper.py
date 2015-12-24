@@ -226,19 +226,20 @@ class VideoLooper(object):
         while self._running:
             # Load and play a new movie if nothing is playing.
             if not self._player.is_playing():
+                # Rebuild the playlist at the end of sequence.
+                # Does not work for a playlist of 1.
+                if (playlist._index == playlist.length() - 1):
+                    self._print('Playlist changed, rebuild...')
+                    self._player.stop(3)  # Up to 3 second delay waiting for old 
+                                          # player to stop.
+                    # Rebuild playlist and show countdown again (if OSD enabled).
+                    playlist = self._build_playlist()
+                    self._prepare_to_run_playlist(playlist)
                 movie = playlist.get_next()
                 if movie is not None:
                     # Start playing the first available movie.
                     self._print('Playing movie: {0}'.format(movie))
                     self._player.play(movie, loop=playlist.length() == 1, vol = self._sound_vol)
-            # Check for changes in the file search path (like USB drives added)
-            # and rebuild the playlist.
-            if self._reader.is_changed():
-                self._player.stop(3)  # Up to 3 second delay waiting for old 
-                                      # player to stop.
-                # Rebuild playlist and show countdown again (if OSD enabled).
-                playlist = self._build_playlist()
-                self._prepare_to_run_playlist(playlist)
             # Give the CPU some time to do other tasks.
             time.sleep(0.002)
 
