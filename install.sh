@@ -13,6 +13,14 @@ echo "Installing dependencies..."
 echo "=========================="
 apt-get update
 apt-get -y install build-essential python-dev python-pip python-pygame supervisor git omxplayer
+pip install RPi.GPIO
+
+echo "Installing omxplayer..."
+echo "=================================="
+cd /tmp
+wget http://omxplayer.sconde.net/builds/omxplayer_0.3.7\~git20170130\~62fb580_armhf.deb
+dpkg -i omxplayer_0.3.7\~git20170130\~62fb580_armhf.deb
+cd -
 
 echo "Installing hello_video..."
 echo "========================="
@@ -29,6 +37,12 @@ echo "=================================="
 mkdir -p /mnt/usbdrive0 # This is very important if you put your system in readonly after
 python setup.py install --force
 cp video_looper.ini /boot/video_looper.ini
+
+echo "Installing dbus-omxplayer program..."
+echo "=================================="
+mkdir -p /usr/local/bin # This is very important if you put your system in readonly after
+chmod +x dbus-omxplayer
+cp dbus-omxplayer /usr/local/bin/dbus-omxplayer
 
 echo "Configuring video_looper to run on start..."
 echo "==========================================="

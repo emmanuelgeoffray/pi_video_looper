@@ -13,6 +13,9 @@ import pygame
 
 from model import Playlist
 
+import RPi.GPIO as GPIO
+
+
 
 # Basic video looper architecure:
 #
@@ -77,6 +80,15 @@ class VideoLooper(object):
         self._extensions = self._player.supported_extensions()
         self._small_font = pygame.font.Font(None, 50)
         self._big_font   = pygame.font.Font(None, 250)
+        # Init sensor
+        GPIO.setmode(GPIO.BCM)
+        # Load position to pause to when sensor falldown
+        self._channel = int(self._config.get('sensor', 'channel'))
+        GPIO.setup(self._channel, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(self._channel, GPIO.BOTH)
+        # Load position to pause to when sensor falldown
+        self._pausePosition = int(float(self._config.get('sensor', 'pause_position'))*1000)
+
         self._running    = True
 
     def _print(self, message):
@@ -209,23 +221,34 @@ class VideoLooper(object):
         self._prepare_to_run_playlist(playlist)
         # Main loop to play videos in the playlist and listen for file changes.
         while self._running:
-            # Load and play a new movie if nothing is playing.
-            if not self._player.is_playing():
-                movie = playlist.get_next()
-                if movie is not None:
-                    # Start playing the first available movie.
-                    self._print('Playing movie: {0}'.format(movie))
-                    self._player.play(movie, loop=playlist.length() == 1, vol = self._sound_vol)
-            # Check for changes in the file search path (like USB drives added)
-            # and rebuild the playlist.
-            if self._reader.is_changed():
-                self._player.stop(3)  # Up to 3 second delay waiting for old 
-                                      # player to stop.
-                # Rebuild playlist and show countdown again (if OSD enabled).
-                playlist = self._build_playlist()
-                self._prepare_to_run_playlist(playlist)
-            # Give the CPU some time to do other tasks.
-            time.sleep(0.002)
+          # Load and play a new movie if nothing is playing.
+          if not self._player.is_playing():
+              movie = playlist.get_next()
+              if movie is not None:
+                  # Start playing the first available movie.
+                  self._print('Playing movie: {0}'.format(movie))
+                  self._player.play(movie, loop=playlist.length() == 1, vol = self._sound_vol)
+
+          if GPIO.event_detected(self._channel):
+            if GPIO.input(self._channel):
+              self._player.setPosition(self._pausePosition)
+              self._player.playMovie()
+            else:
+              if self._player.is_playing():
+                self._player.setPosition(self._pausePosition)
+                time.sleep(0.1)
+                self._player.pauseMovie()
+
+          # Check for changes in the file search path (like USB drives added)
+          # and rebuild the playlist.
+          if self._reader.is_changed():
+              self._player.stop(3)  # Up to 3 second delay waiting for old 
+                                    # player to stop.
+              # Rebuild playlist and show countdown again (if OSD enabled).
+              playlist = self._build_playlist()
+              self._prepare_to_run_playlist(playlist)
+          # Give the CPU some time to do other tasks.
+          time.sleep(0.002)
 
     def signal_quit(self, signal, frame):
         """Shut down the program, meant to by called by signal handler."""

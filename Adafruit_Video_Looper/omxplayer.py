@@ -29,7 +29,7 @@ class OMXPlayer(object):
 
     def play(self, movie, loop=False, vol=0):
         """Play the provided movied file, optionally looping it repeatedly."""
-        self.stop(3)  # Up to 3 second delay to let the old player stop.
+        self.stop(0)  # Up to 3 second delay to let the old player stop.
         # Assemble list of arguments.
         args = ['omxplayer']
         args.extend(['-o', self._sound])  # Add sound arguments.
@@ -43,6 +43,30 @@ class OMXPlayer(object):
         self._process = subprocess.Popen(args,
                                          stdout=open(os.devnull, 'wb'),
                                          close_fds=True)
+
+
+    def dbusControl(self, method, arg=False):
+        """Play the playing movie file."""
+        # Assemble list of arguments.
+        args = ['dbus-omxplayer']
+        args.extend([method])
+        if arg:
+          args.extend([str(arg)])
+        subprocess.Popen(args,
+          stdout=open(os.devnull, 'wb'),
+          close_fds=True)
+
+    def playMovie(self):
+        """Play the playing movie file."""
+        self.dbusControl('play')
+
+    def pauseMovie(self):
+        """Play the playing movie file."""
+        self.dbusControl('pause')
+
+    def setPosition(self, pos):
+        """Set position in ms movie file."""
+        self.dbusControl('setposition', pos)
 
     def is_playing(self):
         """Return true if the video player is running, false otherwise."""
