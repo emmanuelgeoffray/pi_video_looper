@@ -88,6 +88,8 @@ class VideoLooper(object):
         GPIO.add_event_detect(self._channel, GPIO.BOTH)
         # Load position to pause to when sensor falldown
         self._pausePosition = int(float(self._config.get('sensor', 'pause_position'))*1000)
+        # Load delay before playing again
+        self._delayOnPlay = float(self._config.get('sensor', 'delay_on_play'))/1000
 
         self._running    = True
 
@@ -228,10 +230,16 @@ class VideoLooper(object):
                   # Start playing the first available movie.
                   self._print('Playing movie: {0}'.format(movie))
                   self._player.play(movie, loop=playlist.length() == 1, vol = self._sound_vol)
+                  time.sleep(2)
+                  self._player.setPosition(self._pausePosition)
+                  if GPIO.input(self._channel) == GPIO.LOW:
+                    time.sleep(0.1)
+                    self._player.pauseMovie()
 
           if GPIO.event_detected(self._channel):
             if GPIO.input(self._channel):
-              self._player.setPosition(self._pausePosition)
+              #self._player.setPosition(self._pausePosition)
+              time.sleep(self._delayOnPlay)
               self._player.playMovie()
             else:
               if self._player.is_playing():
